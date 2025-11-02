@@ -1,55 +1,38 @@
-import express from "express";
-import mongoose from "mongoose";
-import dotenv from "dotenv";
-import cors from "cors";
-import cookieParser from "cookie-parser";
-import morgan from "morgan";
-import "express-async-errors";
-
-import authRoutes from "./routes/authRoutes.js";
-import courseRoutes from "./routes/courseRoutes.js";
-import purchaseRoutes from "./routes/purchaseRoutes.js";
-import webhookRoutes from "./routes/webhookRoutes.js";
-
+const express = require("express");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const dotenv = require("dotenv");
 dotenv.config();
+
+const connectDB = require("./config/database");
+connectDB();
+
+const authRoutes = require("./routes/auth");
+const courseRoutes = require("./routes/courses");
+const bundleRoutes = require("./routes/bundles");
+const purchaseRoutes = require("./routes/purchase");
+const webhookRoutes = require("./routes/webhooks");
+const dashboardRoutes = require("./routes/dashboard");
+
+const rawBodyMiddleware = require("./middlewares/rawBodyMiddleware");
 
 const app = express();
 
-const connectDB = async () => {
-    try {
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log("✅ MongoDB Connected Successfully");
-    } catch (error) {
-        console.error("❌ MongoDB connection failed:", error.message);
-        process.exit(1);
-    }
-};
-connectDB();
+app.use(cors());
+app.use(bodyParser.json());
 
-app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
-app.use(express.json({ limit: "10mb" }));
-app.use(cookieParser());
-app.use(morgan("dev"));
+// Razorpay webhook requires raw body; route uses raw middleware
+app.use("/api/webhooks/razorpay", rawBodyMiddleware);
 
+// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/courses", courseRoutes);
+app.use("/api/bundles", bundleRoutes);
 app.use("/api/purchase", purchaseRoutes);
 app.use("/api/webhooks", webhookRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
-
-app.get("/", (req, res) => {
-    res.json({ status: "success", message: "Backend API is running 🚀" });
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+    console.log("🚀 Server running on port", PORT);
 });
-
-app.use((err, req, res, next) => {
-    console.error("❌ Error:", err);
-    res.status(500).json({
-        success: false,
-        message: err.message || "Internal Server Error",
-    });
-});
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-    console.log(`🚀 Server running on port ${PORT} in ${process.env.NODE_ENV || "development"} mode`)
-);
