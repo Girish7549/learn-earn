@@ -32,6 +32,18 @@ app.use("/api/purchase", purchaseRoutes);
 app.use("/api/webhooks", webhookRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
+// Health
+app.get("/", (req, res) => {
+    res.status(200).send(`
+    <html>
+      <head><title>Server Status</title></head>
+      <body>
+        <h1>Listening at port ${process.env.PORT}</h1>
+      </body>
+    </html>
+  `);
+});
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
     console.log("🚀 Server running on port", PORT);
