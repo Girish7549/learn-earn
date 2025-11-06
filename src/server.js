@@ -34,7 +34,7 @@ app.use("/api/dashboard", dashboardRoutes);
 
 // Health
 app.get("/", (req, res) => {
-    res.status(200).send(`
+  res.status(200).send(`
     <html>
       <head><title>Server Status</title></head>
       <body>
@@ -46,5 +46,5 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
-    console.log("🚀 Server running on port", PORT);
+  console.log("🚀 Server running on port", PORT);
 });
