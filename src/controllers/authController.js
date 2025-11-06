@@ -11,7 +11,7 @@ function generateReferralCode() {
 // 🟢 Register or Login (auto)
 exports.registerOrLogin = async (req, res) => {
     try {
-        const { email, name, referralCode, password } = req.body;
+        const { email, role, name, referralCode, password } = req.body;
         if (!email) return res.status(400).json({ error: "Email required" });
 
         let user = await User.findOne({ email });
@@ -23,6 +23,7 @@ exports.registerOrLogin = async (req, res) => {
             user = new User({
                 email,
                 name: name || "",
+                role,
                 password: hashedPassword,
                 referralCode: generateReferralCode(),
             });
