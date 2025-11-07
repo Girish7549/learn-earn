@@ -1,37 +1,55 @@
 const Bundle = require("../models/Bundle");
 const Purchase = require("../models/Purchase");
+const cloudinary = require("../config/cloudinary");
 
 // ===============================
-// 📦 Get All Active Bundles (Public)
+// Utility: Upload Buffer to Cloudinary
+// ===============================
+const uploadBufferToCloudinary = (buffer, originalname, folder = "bundles") => {
+    return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+            {
+                folder,
+                use_filename: true,
+                public_id: originalname.split(".")[0].trim(),
+                unique_filename: false,
+                resource_type: "image",
+            },
+            (error, result) => {
+                if (error) return reject(error);
+                resolve(result.secure_url);
+            }
+        );
+        stream.end(buffer);
+    });
+};
+
+// ===============================
+// List all bundles (public)
 // ===============================
 exports.listBundles = async (req, res) => {
     try {
         const bundles = await Bundle.find()
-            .populate("courseIds")
+            .populate("courseIds", "title thumbnail")
             .sort({ createdAt: -1 });
         res.json({ success: true, bundles });
     } catch (err) {
-        console.error("Error fetching bundles:", err);
+        console.error(err);
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
+
 // ===============================
-// 📦 Get All User Bundles (Public)
+// Get bundles for logged-in user
 // ===============================
 exports.userBundles = async (req, res) => {
     try {
         const userId = req.user?._id;
 
-        // 1️⃣ Get all active bundles with full course details
         const bundles = await Bundle.find({ isActive: true })
-            .populate({
-                path: "courseIds",
-                model: "Course",
-                select: "title description thumbnail sections createdAt",
-            })
+            .populate("courseIds", "title description thumbnail sections")
             .sort({ createdAt: -1 });
 
-        // 2️⃣ Find purchases made by this user
         const purchases = await Purchase.find({ userId, status: "completed" })
             .select("bundleId purchasedBundles")
             .populate({
@@ -40,26 +58,16 @@ exports.userBundles = async (req, res) => {
                 select: "name thumbnail price description",
             });
 
-        // 3️⃣ Extract all purchased bundle IDs
         const purchasedIds = new Set();
-
         purchases.forEach((p) => {
             if (p.bundleId?._id) purchasedIds.add(p.bundleId._id.toString());
-            (p.purchasedBundles || []).forEach((b) =>
-                purchasedIds.add(b.toString())
-            );
+            (p.purchasedBundles || []).forEach((b) => purchasedIds.add(b.toString()));
         });
 
-        // 4️⃣ Separate purchased vs available bundles
-        const purchasedBundles = bundles.filter((b) =>
-            purchasedIds.has(b._id.toString())
-        );
-        const availableBundles = bundles.filter(
-            (b) => !purchasedIds.has(b._id.toString())
-        );
+        const purchasedBundles = bundles.filter((b) => purchasedIds.has(b._id.toString()));
+        const availableBundles = bundles.filter((b) => !purchasedIds.has(b._id.toString()));
 
-        // ✅ Final response
-        res.status(200).json({
+        res.json({
             success: true,
             user: userId,
             purchasedCount: purchasedBundles.length,
@@ -67,112 +75,125 @@ exports.userBundles = async (req, res) => {
             purchasedBundles,
             availableBundles,
         });
-    } catch (error) {
-        console.error("Error in userBundles:", error);
-        res.status(500).json({
-            success: false,
-            message: "Failed to fetch bundles",
-            error: error.message,
-        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: "Failed to fetch bundles" });
     }
 };
 
 // ===============================
-// 📦 Get Single Bundle by ID (Public)
+// Get single bundle by ID
 // ===============================
 exports.getBundleById = async (req, res) => {
     try {
         const bundle = await Bundle.findById(req.params.id).populate("courseIds");
-        if (!bundle) {
-            return res.status(404).json({ success: false, message: "Bundle not found" });
-        }
+        if (!bundle) return res.status(404).json({ success: false, message: "Bundle not found" });
         res.json({ success: true, bundle });
     } catch (err) {
-        console.error("Error fetching bundle:", err);
+        console.error(err);
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
 
 // ===============================
-// 🛠️ Create New Bundle (Admin)
+// Create Bundle (Admin)
 // ===============================
 exports.createBundle = async (req, res) => {
     try {
-        const { name, price, description, courseIds, thumbnail, isActive } = req.body;
+        const { name, price, description, courseIds, isActive } = req.body;
 
         if (!name || !price) {
             return res.status(400).json({ success: false, message: "Name and price are required" });
+        }
+
+        let thumbnailUrl = null;
+        if (req.files?.thumbnail?.length > 0) {
+            thumbnailUrl = await uploadBufferToCloudinary(req.files.thumbnail[0].buffer, req.files.thumbnail[0].originalname);
         }
 
         const newBundle = await Bundle.create({
             name,
             price,
             description,
-            courseIds,
-            thumbnail,
-            isActive: isActive !== undefined ? isActive : true
+            courseIds: courseIds ? JSON.parse(courseIds) : [],
+            thumbnail: thumbnailUrl,
+            isActive: isActive !== undefined ? isActive : true,
         });
 
         res.status(201).json({ success: true, bundle: newBundle });
     } catch (err) {
-        console.error("Error creating bundle:", err);
+        console.error(err);
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
 
 // ===============================
-// ✏️ Update Bundle by ID (Admin)
+// Update Bundle (Admin)
 // ===============================
 exports.updateBundle = async (req, res) => {
     try {
         const { id } = req.params;
-        const updatedBundle = await Bundle.findByIdAndUpdate(id, req.body, { new: true });
-        if (!updatedBundle) {
-            return res.status(404).json({ success: false, message: "Bundle not found" });
+
+        const updates = { ...req.body };
+
+        // Handle JSON parsing for courseIds
+        if (updates.courseIds) {
+            updates.courseIds = JSON.parse(updates.courseIds);
         }
+
+        // Handle thumbnail upload
+        if (req.files?.thumbnail?.length > 0) {
+            updates.thumbnail = await uploadBufferToCloudinary(
+                req.files.thumbnail[0].buffer,
+                req.files.thumbnail[0].originalname
+            );
+        }
+
+        const updatedBundle = await Bundle.findByIdAndUpdate(id, updates, { new: true });
+
+        if (!updatedBundle) return res.status(404).json({ success: false, message: "Bundle not found" });
+
         res.json({ success: true, bundle: updatedBundle });
     } catch (err) {
-        console.error("Error updating bundle:", err);
+        console.error(err);
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
 
 // ===============================
-// ❌ Delete Bundle by ID (Admin)
+// Delete Bundle
 // ===============================
 exports.deleteBundle = async (req, res) => {
     try {
         const { id } = req.params;
         const deleted = await Bundle.findByIdAndDelete(id);
-        if (!deleted) {
-            return res.status(404).json({ success: false, message: "Bundle not found" });
-        }
+        if (!deleted) return res.status(404).json({ success: false, message: "Bundle not found" });
         res.json({ success: true, message: "Bundle deleted successfully" });
     } catch (err) {
-        console.error("Error deleting bundle:", err);
+        console.error(err);
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
 
 // ===============================
-// 🧩 Toggle Active/Inactive Status (Admin)
+// Toggle Active/Inactive (Admin)
 // ===============================
 exports.toggleBundleStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const bundle = await Bundle.findById(id);
-        if (!bundle) {
-            return res.status(404).json({ success: false, message: "Bundle not found" });
-        }
+        if (!bundle) return res.status(404).json({ success: false, message: "Bundle not found" });
+
         bundle.isActive = !bundle.isActive;
         await bundle.save();
+
         res.json({
             success: true,
             message: `Bundle ${bundle.isActive ? "activated" : "deactivated"} successfully`,
             bundle
         });
     } catch (err) {
-        console.error("Error toggling bundle status:", err);
+        console.error(err);
         res.status(500).json({ success: false, message: "Server error" });
     }
 };

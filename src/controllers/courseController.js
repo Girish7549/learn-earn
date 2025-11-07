@@ -2,7 +2,29 @@ const Course = require("../models/Course");
 const cloudinary = require("../config/cloudinary");
 
 // ===============================
-// List all active courses (Public)
+// Utility for Cloudinary Upload (Buffer)
+// ===============================
+const uploadBufferToCloudinary = (buffer, originalname, type = "image") => {
+    return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+            {
+                folder: type === "image" ? "courses/thumbnails" : "courses/videos",
+                use_filename: true,
+                public_id: originalname.split(".")[0].trim(),
+                unique_filename: false,
+                resource_type: type === "video" ? "video" : "image",
+            },
+            (error, result) => {
+                if (error) return reject(error);
+                resolve(result.secure_url);
+            }
+        );
+        stream.end(buffer);
+    });
+};
+
+// ===============================
+// List all courses
 // ===============================
 exports.listCourses = async (req, res) => {
     try {
@@ -26,37 +48,24 @@ exports.getCourseById = async (req, res) => {
     }
 };
 
-
-
-// Utility for Cloudinary Upload
-const uploadBufferToCloudinary = (buffer, originalname, type = "image") => {
-    return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-            {
-                folder: "courses/image",
-                use_filename: true,
-                public_id: originalname.split(".")[0].trim(),
-                unique_filename: false,
-                resource_type: type === "audio" ? "video" : "image",
-            },
-            (error, result) => {
-                if (error) return reject(error);
-                resolve(result.secure_url);
-            }
-        );
-        stream.end(buffer);
-    });
-};
-
 // ===============================
-// Create course
+// Create Course
 // ===============================
 exports.createCourse = async (req, res) => {
     try {
-        const { title, description, price, category, duration, instructor } = req.body;
-        const courseData = { title, description, price, category, duration, instructor };
+        const { title, description, price, category, duration, instructor, sections } = req.body;
 
-        // 🔹 Handle course thumbnail upload
+        // 🔹 Parse sections JSON string
+        let parsedSections = [];
+        try {
+            parsedSections = JSON.parse(sections || "[]");
+        } catch (err) {
+            return res.status(400).json({ error: "Invalid sections JSON format" });
+        }
+
+        const courseData = { title, description, price, category, duration, instructor, sections: [] };
+
+        // 🔹 Upload thumbnail if exists
         if (req.files?.thumbnail?.length > 0) {
             const uploadedImage = await uploadBufferToCloudinary(
                 req.files.thumbnail[0].buffer,
@@ -66,40 +75,44 @@ exports.createCourse = async (req, res) => {
             courseData.thumbnail = uploadedImage;
         }
 
-        // // 🔹 Handle course preview video (optional)
-        // if (req.files?.previewVideo?.length > 0) {
-        //     const uploadedVideo = await uploadBufferToCloudinary(
-        //         req.files.previewVideo[0].buffer,
-        //         req.files.previewVideo[0].originalname,
-        //         "video"
-        //     );
-        //     courseData.previewVideo = uploadedVideo;
-        // }
+        // 🔹 Add sections & lessons (videoUrl comes from frontend)
+        parsedSections.forEach((section) => {
+            const sectionData = { title: section.title, lessons: [] };
+            section.lessons.forEach((lesson) => {
+                sectionData.lessons.push({
+                    title: lesson.title,
+                    videoUrl: lesson.videoUrl || "", // URL sent from frontend
+                    duration: lesson.duration || "",
+                    isFreePreview: lesson.isFreePreview || false,
+                });
+            });
+            courseData.sections.push(sectionData);
+        });
 
         const course = await Course.create(courseData);
+
         res.status(201).json({
             success: true,
-            message: "Course created successfully",
+            message: "✅ Course created successfully with video URLs",
             course,
         });
     } catch (err) {
-        console.error("Create Course Error:", err);
+        console.error("❌ Create Course Error:", err);
         res.status(500).json({ error: err.message });
     }
 };
 
 // ===============================
-// Update course (Admin only)
+// Update Course
 // ===============================
 exports.updateCourse = async (req, res) => {
     try {
         const course = await Course.findById(req.params.id);
         if (!course) return res.status(404).json({ error: "Course not found" });
 
-        const updates = req.body;
-        console.log("from ui : ", req.files?.thumbnail)
+        const updates = { ...req.body };
 
-        // 🔹 Update thumbnail if uploaded
+        // 🔹 Upload new thumbnail if exists
         if (req.files?.thumbnail?.length > 0) {
             const uploadedImage = await uploadBufferToCloudinary(
                 req.files.thumbnail[0].buffer,
@@ -108,36 +121,31 @@ exports.updateCourse = async (req, res) => {
             );
             updates.thumbnail = uploadedImage;
         }
-        console.log("IMAGE URL ;", updates.thumbnail)
 
-        // // 🔹 Update preview video if uploaded
-        // if (req.files?.previewVideo?.length > 0) {
-        //     const uploadedVideo = await uploadBufferToCloudinary(
-        //         req.files.previewVideo[0].buffer,
-        //         req.files.previewVideo[0].originalname,
-        //         "video"
-        //     );
-        //     updates.previewVideo = uploadedVideo;
-        // }
+        // 🔹 Parse sections JSON if sent
+        if (updates.sections) {
+            try {
+                updates.sections = JSON.parse(updates.sections);
+            } catch (err) {
+                return res.status(400).json({ error: "Invalid sections JSON format" });
+            }
+        }
 
-        const updatedCourse = await Course.findByIdAndUpdate(req.params.id, updates, {
-            new: true,
-        });
+        const updatedCourse = await Course.findByIdAndUpdate(req.params.id, updates, { new: true });
 
         res.json({
             success: true,
-            message: "Course updated successfully",
+            message: "✅ Course updated successfully",
             course: updatedCourse,
         });
     } catch (err) {
-        console.error("Update Course Error:", err);
+        console.error("❌ Update Course Error:", err);
         res.status(500).json({ error: err.message });
     }
 };
 
-
 // ===============================
-// Delete course (Admin only)
+// Delete Course
 // ===============================
 exports.deleteCourse = async (req, res) => {
     try {
@@ -150,7 +158,7 @@ exports.deleteCourse = async (req, res) => {
 };
 
 // ===============================
-// Toggle active/inactive course (Admin only)
+// Toggle Active/Inactive
 // ===============================
 exports.toggleCourseStatus = async (req, res) => {
     try {
@@ -160,7 +168,7 @@ exports.toggleCourseStatus = async (req, res) => {
         await course.save();
         res.json({
             message: `Course ${course.isActive ? "activated" : "deactivated"} successfully`,
-            course
+            course,
         });
     } catch (err) {
         res.status(500).json({ error: err.message });

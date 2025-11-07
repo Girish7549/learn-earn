@@ -103,6 +103,22 @@ exports.getDashboardStats = async (req, res) => {
                 leaderboard: leaderboardData,
             },
         });
+        // res.json({
+        //     success: true,
+        //     data: {
+        //         user: {
+        //             name: user.name,
+        //             totalEarnings: 760430,
+        //             todaysEarnings: 17625,
+        //             weeklyEarnings: 882400,
+        //             withdrawn: 1725600,
+        //             availableBalance: 2389557,
+        //             activeReferrals,
+        //             enrolledBundles,
+        //         },
+        //         leaderboard: leaderboardData,
+        //     },
+        // });
     } catch (err) {
         console.error("Dashboard Stats Error:", err);
         res.status(500).json({ error: "Failed to fetch dashboard stats" });
