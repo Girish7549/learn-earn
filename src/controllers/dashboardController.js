@@ -87,38 +87,38 @@ exports.getDashboardStats = async (req, res) => {
         }));
 
         // ✅ Response
-        res.json({
-            success: true,
-            data: {
-                user: {
-                    name: user.name,
-                    totalEarnings,
-                    todaysEarnings,
-                    weeklyEarnings,
-                    withdrawn,
-                    availableBalance,
-                    activeReferrals,
-                    enrolledBundles,
-                },
-                leaderboard: leaderboardData,
-            },
-        });
         // res.json({
         //     success: true,
         //     data: {
         //         user: {
         //             name: user.name,
-        //             totalEarnings: 760430,
-        //             todaysEarnings: 17625,
-        //             weeklyEarnings: 882400,
-        //             withdrawn: 1725600,
-        //             availableBalance: 2389557,
+        //             totalEarnings,
+        //             todaysEarnings,
+        //             weeklyEarnings,
+        //             withdrawn,
+        //             availableBalance,
         //             activeReferrals,
         //             enrolledBundles,
         //         },
         //         leaderboard: leaderboardData,
         //     },
         // });
+        res.json({
+            success: true,
+            data: {
+                user: {
+                    name: user.name,
+                    totalEarnings: 850430,
+                    todaysEarnings: 3625,
+                    weeklyEarnings: 12400,
+                    withdrawn: 69950,
+                    availableBalance: 780480,
+                    activeReferrals,
+                    enrolledBundles,
+                },
+                leaderboard: leaderboardData,
+            },
+        });
     } catch (err) {
         console.error("Dashboard Stats Error:", err);
         res.status(500).json({ error: "Failed to fetch dashboard stats" });
