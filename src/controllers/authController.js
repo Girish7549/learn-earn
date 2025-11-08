@@ -115,7 +115,7 @@ const uploadBufferToCloudinary = (buffer, originalname, type = "image") => {
 // 🟡 Update user (Admin use)
 exports.updateUser = async (req, res) => {
     try {
-        const { name, email, password, role, phone, gender, dob, address, bio, socialLinks } = req.body;
+        const { name, email, password, role, phone, gender, dob, address, bio, socialLinks, totalEarnings, earningsBalance } = req.body;
 
         const userId = req.params.id;
 
@@ -197,6 +197,8 @@ exports.updateUser = async (req, res) => {
                 profileImage: user.profileImage,
                 bio: user.bio,
                 socialLinks: user.socialLinks,
+                totalEarnings,
+                earningsBalance,
                 createdAt: user.createdAt,
             },
         });

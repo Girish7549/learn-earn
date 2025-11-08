@@ -244,45 +244,78 @@ exports.verifyPayment = async (req, res) => {
         purchase.isPaid = true;
         await purchase.save();
 
-        // ✅ Handle Commission
+        // ✅ Handle Commission Logic Based on Bundle Comparison
         const user = await User.findById(userId);
         if (user.referredBy) {
             const referrer = await User.findById(user.referredBy);
 
             if (referrer) {
-                // ✅ Fetch bundle safely
-                const bundle = await Bundle.findById(purchase.bundleId);
-                if (!bundle) {
+                // Get the buyer's bundle (the one they just purchased)
+                const purchaseBundle = await Bundle.findById(purchase.bundleId);
+                if (!purchaseBundle) {
                     console.warn(`Bundle not found for purchase ${purchase._id}`);
                 } else {
-                    // ✅ Extract commission and ensure it's a valid number
-                    console.log("Bundle finded :", bundle)
-                    const commission = Number(bundle.commision) || 0;
+                    // ✅ Find referrer’s latest completed purchase
+                    const referrerPurchase = await Purchase.findOne({
+                        userId: referrer._id,
+                        status: "completed",
+                        isPaid: true
+                    }).sort({ createdAt: -1 });
 
-                    // ✅ Ensure referrer's earnings are numeric before addition
-                    const currentBalance = Number(referrer.earningsBalance) || 0;
-                    const currentTotal = Number(referrer.totalEarnings) || 0;
-
-                    if (commission > 0) {
-                        referrer.earningsBalance = currentBalance + commission;
-                        referrer.totalEarnings = currentTotal + commission;
-
-                        await referrer.save();
-
-                        await Transaction.create({
-                            type: "commission",
-                            fromPurchaseId: purchase._id,
-                            toUserId: referrer._id,
-                            amount: commission,
-                            level: 1,
-                            description: `Commission earned from ${user.email}`,
-                        });
+                    if (!referrerPurchase) {
+                        console.warn(`Referrer ${referrer._id} has no completed purchase.`);
                     } else {
-                        console.warn(`Invalid or zero commission for bundle: ${bundle._id}`);
+                        const referrerBundle = await Bundle.findById(referrerPurchase.bundleId);
+                        if (!referrerBundle) {
+                            console.warn(`Referrer bundle not found for ${referrer._id}`);
+                        } else {
+                            // Extract commission values
+                            const referrerCommission = Number(referrerBundle.commision) || 0;
+                            const buyerCommission = Number(purchaseBundle.commision) || 0;
+
+                            // Apply your business rule:
+                            let finalCommission = 0;
+                            if (buyerCommission >= referrerCommission) {
+                                // Buyer’s bundle is same or higher
+                                finalCommission = referrerCommission;
+                            } else {
+                                // Buyer’s bundle is lower
+                                finalCommission = buyerCommission;
+                            }
+
+                            if (finalCommission > 0) {
+                                // Update referrer’s earnings
+                                const currentBalance = Number(referrer.earningsBalance) || 0;
+                                const currentTotal = Number(referrer.totalEarnings) || 0;
+
+                                referrer.earningsBalance = currentBalance + finalCommission;
+                                referrer.totalEarnings = currentTotal + finalCommission;
+                                await referrer.save();
+
+                                // Record transaction
+                                await Transaction.create({
+                                    type: "commission",
+                                    fromPurchaseId: purchase._id,
+                                    toUserId: referrer._id,
+                                    amount: finalCommission,
+                                    level: 1,
+                                    description: `Commission earned from ${user.email}`,
+                                });
+
+                                console.log(
+                                    `Commission of ₹${finalCommission} awarded to referrer ${referrer._id}`
+                                );
+                            } else {
+                                console.warn(
+                                    `Invalid commission calculated: ${finalCommission} for referrer ${referrer._id}`
+                                );
+                            }
+                        }
                     }
                 }
             }
         }
+
 
         res.json({ success: true, message: "Payment verified successfully" });
     } catch (err) {
