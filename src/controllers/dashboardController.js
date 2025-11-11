@@ -87,38 +87,38 @@ exports.getDashboardStats = async (req, res) => {
         }));
 
         // ✅ Response
-        // res.json({
-        //     success: true,
-        //     data: {
-        //         user: {
-        //             name: user.name,
-        //             totalEarnings,
-        //             todaysEarnings,
-        //             weeklyEarnings,
-        //             withdrawn,
-        //             availableBalance,
-        //             activeReferrals,
-        //             enrolledBundles,
-        //         },
-        //         leaderboard: leaderboardData,
-        //     },
-        // });
         res.json({
             success: true,
             data: {
                 user: {
                     name: user.name,
-                    totalEarnings: 850430,
-                    todaysEarnings: 3625,
-                    weeklyEarnings: 12400,
-                    withdrawn: 69950,
-                    availableBalance: 780480,
+                    totalEarnings,
+                    todaysEarnings,
+                    weeklyEarnings,
+                    withdrawn,
+                    availableBalance, 
                     activeReferrals,
                     enrolledBundles,
                 },
                 leaderboard: leaderboardData,
             },
         });
+        // res.json({
+        //     success: true,
+        //     data: {
+        //         user: {
+        //             name: user.name,
+        //             totalEarnings: 850430,
+        //             todaysEarnings: 3625,
+        //             weeklyEarnings: 12400,
+        //             withdrawn: 780480,
+        //             availableBalance: 69950,
+        //             activeReferrals,
+        //             enrolledBundles,
+        //         },
+        //         leaderboard: leaderboardData,
+        //     },
+        // });
     } catch (err) {
         console.error("Dashboard Stats Error:", err);
         res.status(500).json({ error: "Failed to fetch dashboard stats" });
