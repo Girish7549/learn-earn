@@ -78,7 +78,7 @@ exports.getDashboardStats = async (req, res) => {
             .sort({ totalEarnings: -1 })
             .limit(10);
 
-        const rank = leaderboard.map((lead) => lead.name.includes(user.name))
+        const rank = leaderboard.filter((lead) => lead.name === user.name)
 
         const leaderboardData = leaderboard.map((u, index) => ({
             rank: index + 1,
