@@ -78,6 +78,8 @@ exports.getDashboardStats = async (req, res) => {
             .sort({ totalEarnings: -1 })
             .limit(10);
 
+        const rank = leaderboard.map((lead) => lead.name.includes(user.name))
+
         const leaderboardData = leaderboard.map((u, index) => ({
             rank: index + 1,
             name: u.name,
@@ -96,9 +98,10 @@ exports.getDashboardStats = async (req, res) => {
                     todaysEarnings,
                     weeklyEarnings,
                     withdrawn,
-                    availableBalance, 
+                    availableBalance,
                     activeReferrals,
                     enrolledBundles,
+                    rank
                 },
                 leaderboard: leaderboardData,
             },
