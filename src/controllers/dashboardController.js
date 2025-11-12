@@ -101,7 +101,6 @@ exports.getDashboardStats = async (req, res) => {
                     availableBalance,
                     activeReferrals,
                     enrolledBundles,
-                    rank
                 },
                 leaderboard: leaderboardData,
             },
