@@ -75,8 +75,8 @@ exports.getDashboardStats = async (req, res) => {
 
         // 🏆 Leaderboard (Top 10 users by totalEarnings)
         const leaderboard = await User.find({}, "name totalEarnings profileImage successfulReferrals")
-            .sort({ totalEarnings: -1 })
-            .limit(10);
+            .sort({ totalEarnings: -1 });
+        // .limit(10);
 
         const rank = leaderboard.filter((lead) => lead.name === user.name)
 
