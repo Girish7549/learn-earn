@@ -12,9 +12,9 @@ function generateReferralCode() {
 // 🟢 Register or Login (auto)
 exports.registerOrLogin = async (req, res) => {
     try {
-        const { email, role, name, referralCode, password } = req.body;
-        if (!email) return res.status(400).json({ error: "Email required" });
-
+        const { name, email, phone, password, role = "user", referralCode } = req.body;
+        console.log("first")
+        if (!email || !name || !phone || !password) return res.status(400).json({ error: "All Fields are required!" });
         let user = await User.findOne({ email });
 
         // If user doesn't exist, create a new one
@@ -24,6 +24,7 @@ exports.registerOrLogin = async (req, res) => {
             user = new User({
                 email,
                 name: name || "",
+                phone,
                 role,
                 password: hashedPassword,
                 referralCode: generateReferralCode(),
@@ -44,7 +45,7 @@ exports.registerOrLogin = async (req, res) => {
 
         // Generate token
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "secret", { expiresIn: "30d" });
-        res.json({ token, user });
+        res.json({ success: true, token, user });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Server error" });

@@ -16,6 +16,7 @@ router.put("/user/:id", upload.fields([{ name: "profileImage", maxCount: 1 }]), 
 // router.put("/user/:id", authController.updateUser);
 
 // Admin routes (add JWT + admin middleware later)
+
 router.get("/users", authMiddleware, isAdminMiddleware, authController.allUser);
 router.delete("/user/:id", authMiddleware, isAdminMiddleware, authController.deleteUser);
 
