@@ -378,3 +378,16 @@ exports.updatePurchaseStatus = async (req, res) => {
     }
 };
 
+// =====================================================
+// 🟢 5️⃣ Admin - Delete Purchase Status
+// =====================================================
+exports.deletePurchase = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const purchase = await Purchase.findByIdAndDelete(id);
+        if (!purchase) return res.status(404).json({ error: "Purchase not found" });
+        res.json({ success: true, purchase });
+    } catch (err) {
+        res.status(500).json({ error: "Error updating purchase status" });
+    }
+};

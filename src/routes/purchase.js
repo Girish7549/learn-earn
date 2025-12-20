@@ -12,5 +12,6 @@ router.get("/my", authMiddleware, purchaseController.getMyPurchases);
 // Admin routes
 router.get("/admin/all", authMiddleware, isAdminMiddleware, purchaseController.getAllPurchases);
 router.put("/admin/:id/status", authMiddleware, isAdminMiddleware, purchaseController.updatePurchaseStatus);
+router.delete("/admin/:id", authMiddleware, isAdminMiddleware, purchaseController.deletePurchase);
 
 module.exports = router;
