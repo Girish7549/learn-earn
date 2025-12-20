@@ -30,7 +30,7 @@ const uploadBufferToCloudinary = (buffer, originalname, folder = "bundles") => {
 exports.listBundles = async (req, res) => {
     try {
         const bundles = await Bundle.find()
-            .populate("courseIds", "title thumbnail")
+            .populate("courseIds", " price title description thumbnail")
             .sort({ createdAt: -1 });
         res.json({ success: true, bundles });
     } catch (err) {

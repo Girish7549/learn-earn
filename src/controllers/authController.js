@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Purchase = require("../models/Purchase");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
@@ -63,9 +64,15 @@ exports.login = async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password || "");
         if (!isMatch) return res.status(400).json({ error: "Invalid credentials" });
 
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "secret", { expiresIn: "30d" });
+        const isPaidDoc = await Purchase.findOne({ userId: user._id })
 
-        res.json({ token, user });
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "secret", { expiresIn: "30d" });
+        const userData = user.toObject();
+        userData.isPaid = isPaidDoc?.isPaid || false;
+        console.log("Response :", user)
+
+
+        res.json({ token, user: userData });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Server error" });

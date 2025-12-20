@@ -74,13 +74,14 @@ exports.getDashboardStats = async (req, res) => {
         const enrolledBundles = purchases.map(p => p.bundleId?.name).filter(Boolean);
 
         // 🏆 Leaderboard (Top 10 users by totalEarnings)
-        const leaderboard = await User.find({}, "name totalEarnings profileImage successfulReferrals")
+        const leaderboard = await User.find({}, "_id name totalEarnings profileImage successfulReferrals")
             .sort({ totalEarnings: -1 });
         // .limit(10);
 
         const rank = leaderboard.filter((lead) => lead.name === user.name)
 
         const leaderboardData = leaderboard.map((u, index) => ({
+            id: u._id,
             rank: index + 1,
             name: u.name,
             image: u.profileImage || "https://cdn-icons-png.flaticon.com/512/149/149071.png",

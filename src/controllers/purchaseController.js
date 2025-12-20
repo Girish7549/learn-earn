@@ -194,6 +194,10 @@ exports.createPurchase = async (req, res) => {
             amount: bundle.price * 100, // in paise
             currency: "INR",
             receipt: `receipt_${Date.now()}`,
+            notes: {
+                userId: userId.toString(),
+                bundleId: bundleId.toString()
+            }
         });
 
         // Save in DB
@@ -213,6 +217,8 @@ exports.createPurchase = async (req, res) => {
             amount: bundle.price * 100,
             currency: "INR",
             key: process.env.RAZORPAY_KEY_ID,
+            checkoutUrl: `https://api.razorpay.com/v1/checkout/embedded?order_id=${order.id}&key_id=${process.env.RAZORPAY_KEY_ID}`
+
         });
     } catch (err) {
         console.error(err);
@@ -239,6 +245,10 @@ exports.verifyPayment = async (req, res) => {
         // Update Purchase
         const purchase = await Purchase.findOne({ providerPaymentId: razorpay_order_id });
         if (!purchase) return res.status(404).json({ error: "Purchase not found" });
+
+        if (purchase.status === "completed") {
+            return res.json({ success: true, message: "Already verified" });
+        }
 
         purchase.status = "completed";
         purchase.isPaid = true;
