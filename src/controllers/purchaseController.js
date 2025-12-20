@@ -369,8 +369,8 @@ exports.getAllPurchases = async (req, res) => {
 exports.updatePurchaseStatus = async (req, res) => {
     try {
         const { id } = req.params;
-        const { status } = req.body;
-        const purchase = await Purchase.findByIdAndUpdate(id, { status }, { new: true });
+        const { status, isPaid } = req.body;
+        const purchase = await Purchase.findByIdAndUpdate(id, { status, isPaid }, { new: true });
         if (!purchase) return res.status(404).json({ error: "Purchase not found" });
         res.json({ success: true, purchase });
     } catch (err) {
