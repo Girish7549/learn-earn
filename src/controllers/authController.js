@@ -88,13 +88,13 @@ exports.reloadUser = async (req, res) => {
 
         const isPaidDoc = await Purchase.findOne({ userId: user._id })
 
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "secret", { expiresIn: "30d" });
+        // const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "secret", { expiresIn: "30d" });
         const userData = user.toObject();
         userData.isPaid = isPaidDoc?.isPaid || false;
         console.log("Response :", user)
 
 
-        res.json({ token, user: userData });
+        res.json({ user: userData });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Server error" });
