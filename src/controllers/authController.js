@@ -79,6 +79,27 @@ exports.login = async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 };
+// 🟢 Referesh User (token)
+exports.reloadUser = async (req, res) => {
+    try {
+
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        const isPaidDoc = await Purchase.findOne({ userId: user._id })
+
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "secret", { expiresIn: "30d" });
+        const userData = user.toObject();
+        userData.isPaid = isPaidDoc?.isPaid || false;
+        console.log("Response :", user)
+
+
+        res.json({ token, user: userData });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Server error" });
+    }
+};
 
 // 🟢 Get current user profile
 exports.me = async (req, res) => {

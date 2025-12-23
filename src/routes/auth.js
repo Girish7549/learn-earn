@@ -10,6 +10,7 @@ const upload = require("../config/multer");
 router.post("/register", authController.registerOrLogin);
 router.post("/login", authController.login);
 router.get("/me", authMiddleware, authController.me);
+router.get("/reload-user", authMiddleware, authController.reloadUser);
 router.put("/user/:id", upload.fields([{ name: "profileImage", maxCount: 1 }]), authMiddleware, authController.updateUser);
 // router.put("/user/:id", authMiddleware, authController.updateUser);
 
