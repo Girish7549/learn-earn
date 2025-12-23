@@ -84,7 +84,7 @@ exports.reloadUser = async (req, res) => {
     try {
 
         const user = await User.findById(req.user.id);
-        if (!user) return res.status(404).json({ error: "User not found" });
+        if (!user) return res.status(404).json({ error: "User not found!" });
 
         const isPaidDoc = await Purchase.findOne({ userId: user._id })
 
