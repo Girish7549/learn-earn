@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const BundleSchema = new mongoose.Schema({
     name: String,
     price: Number,
+    level: Number,
     description: String,
     commision: {
         type: Number,

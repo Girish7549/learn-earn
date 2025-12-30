@@ -44,6 +44,52 @@ exports.listBundles = async (req, res) => {
 // ===============================
 exports.userBundles = async (req, res) => {
     try {
+        const userId = req.user._id;
+
+        // 1️⃣ Fetch completed purchases
+        const purchases = await Purchase.find({
+            userId,
+            status: "completed",
+            isPaid: true
+        }).populate("bundleId", "level");
+
+        // 2️⃣ Find max purchased level
+        let maxLevel = 0;
+        purchases.forEach(p => {
+            if (p.bundleId?.level > maxLevel) {
+                maxLevel = p.bundleId.level;
+            }
+        });
+
+        // 3️⃣ Fetch all active bundles
+        const bundles = await Bundle.find({ isActive: true })
+            .populate("courseIds", "title description thumbnail sections")
+            .sort({ level: 1 });
+
+        // 4️⃣ Split bundles
+        const purchasedBundles = bundles.filter(b => b.level <= maxLevel);
+        const availableBundles = bundles.filter(b => b.level > maxLevel);
+
+        res.json({
+            success: true,
+            maxUnlockedLevel: maxLevel,
+            purchasedCount: purchasedBundles.length,
+            availableCount: availableBundles.length,
+            purchasedBundles,
+            availableBundles
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch bundles"
+        });
+    }
+};
+
+exports.userBundlesOLD = async (req, res) => {
+    try {
         const userId = req.user?._id;
 
         const bundles = await Bundle.find({ isActive: true })
@@ -84,6 +130,8 @@ exports.userBundles = async (req, res) => {
 // ===============================
 // Get single bundle by ID
 // ===============================
+
+
 exports.getBundleById = async (req, res) => {
     try {
         const bundle = await Bundle.findById(req.params.id).populate("courseIds");

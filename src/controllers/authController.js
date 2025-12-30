@@ -94,7 +94,7 @@ exports.reloadUser = async (req, res) => {
         console.log("Response :", user)
 
 
-        res.json({ user: userData });
+        res.json({ success: true, user: userData });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Server error" });
@@ -127,9 +127,9 @@ const uploadBufferToCloudinary = (buffer, originalname, type = "image") => {
         const stream = cloudinary.uploader.upload_stream(
             {
                 folder: "users/image",
-                use_filename: true,
-                public_id: originalname.split(".")[0].trim(),
-                unique_filename: false,
+                // use_filename: true,
+                // public_id: originalname.split(".")[0].trim(),
+                // unique_filename: false,
                 resource_type: type === "audio" ? "video" : "image",
             },
             (error, result) => {
@@ -225,6 +225,7 @@ exports.updateUser = async (req, res) => {
                 gender: user.gender,
                 dob: user.dob,
                 address: user.address,
+                isPaid: true,
                 profileImage: user.profileImage,
                 bio: user.bio,
                 socialLinks: user.socialLinks,
